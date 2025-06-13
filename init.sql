@@ -1,0 +1,24 @@
+CREATE TABLE forms (
+    id VARCHAR(36) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    share_token VARCHAR(36) NOT NULL UNIQUE
+);
+
+CREATE TABLE fields (
+    id VARCHAR(36) PRIMARY KEY,
+    form_id VARCHAR(36) NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    label VARCHAR(255) NOT NULL,
+    options JSON,
+    `order` INT NOT NULL,
+    required BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+);
+
+CREATE TABLE responses (
+    id VARCHAR(36) PRIMARY KEY,
+    form_id VARCHAR(36) NOT NULL,
+    data JSON NOT NULL,
+    last_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+);
