@@ -11,6 +11,7 @@ import asyncio
 from dotenv import load_dotenv
 import socketio
 import logging
+import uvicorn
 
 # Configure logging for deployment
 logging.basicConfig(level=logging.INFO)
@@ -25,7 +26,7 @@ app = FastAPI()
 # Add CORS middleware to handle all CORS requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for deployment; adjust as needed
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,7 +37,10 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins=None)
 app.mount('/socket.io', socketio.ASGIApp(sio))
 
 # Database configuration
-DATABASE_URL = os.getenv("DATABASE_URL", "mysql+asyncmy://user:password@localhost:3306/form_db")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+asyncpg://user:password@localhost:5432/form_db")
+# Ensure the DATABASE_URL uses the correct driver for asyncpg
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 database = Database(DATABASE_URL)
 
 # Connection manager for Socket.IO
@@ -101,7 +105,7 @@ async def get_form_id_from_token(share_token: str) -> str:
     result = await database.fetch_one(query=query, values={"share_token": share_token})
     if not result:
         raise HTTPException(status_code=404, detail="Form not found")
-    return result["id"]
+    return str(result["id"])  # Convert UUID to string
 
 async def update_response(form_id: str, field_id: str, value: Any):
     field = await database.fetch_one(
@@ -123,12 +127,13 @@ async def update_response(form_id: str, field_id: str, value: Any):
 
     query = """
         UPDATE responses 
-        SET data = JSON_SET(data, :field_path, :value), last_updated_at = NOW() 
+        SET data = data || jsonb_build_object(:field_id, :value),
+            last_updated_at = NOW()
         WHERE form_id = :form_id
     """
     await database.execute(
         query=query,
-        values={"field_path": f'$.{field_id}', "value": value, "form_id": form_id}
+        values={"field_id": field_id, "value": value, "form_id": form_id}
     )
 
 # API endpoints
@@ -160,7 +165,7 @@ async def create_form(form: FormCreate):
         for field in form.fields:
             field_id = str(uuid.uuid4())
             await database.execute(
-                query="INSERT INTO fields (id, form_id, type, label, options, `order`, required) VALUES (:id, :form_id, :type, :label, :options, :order, :required)",
+                query="INSERT INTO fields (id, form_id, type, label, options, \"order\", required) VALUES (:id, :form_id, :type, :label, :options, :order, :required)",
                 values={
                     "id": field_id,
                     "form_id": form_id,
@@ -191,7 +196,7 @@ async def get_form(share_token: str):
             values={"form_id": form_id}
         )
         fields = await database.fetch_all(
-            query="SELECT id, type, label, options, `order`, required FROM fields WHERE form_id = :form_id ORDER BY `order`",
+            query="SELECT id, type, label, options, \"order\", required FROM fields WHERE form_id = :form_id ORDER BY \"order\"",
             values={"form_id": form_id}
         )
         response_data = await database.fetch_one(
@@ -200,11 +205,11 @@ async def get_form(share_token: str):
         )
         
         return {
-            "id": form["id"],
+            "id": str(form["id"]),
             "name": form["name"],
             "fields": [
                 {
-                    "id": f["id"],
+                    "id": str(f["id"]),
                     "type": f["type"],
                     "label": f["label"],
                     "options": json.loads(f["options"]) if f["options"] else [],
@@ -312,3 +317,8 @@ async def custom_exception_handler(request, exc):
         status_code=500,
         content={"detail": f"An unexpected error occurred: {str(exc)}"}
     )
+
+# Run the app with dynamic port for Render
+if __name__ == "__main__":
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

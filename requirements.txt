@@ -1,7 +1,6 @@
-fastapi==0.103.0 
-uvicorn==0.23.2 
-databases[asyncmy]==0.8.0 
-pydantic==1.10.12 
-python-socketio==5.8.0 
+fastapi==0.103.0
+uvicorn==0.23.2
+databases[asyncpg]==0.8.0
+pydantic==1.10.12
+python-socketio==5.8.0
 python-dotenv==1.0.0
-cryptography==41.0.7
