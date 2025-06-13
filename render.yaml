@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: collab-form-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: form-db
+          property: connectionString
+    autoDeploy: true
+
+  - type: pserv
+    name: form-db
+    env: docker
+    image: mysql:8.0
+    disk:
+      name: mysql-data
+      mountPath: /var/lib/mysql
+    envVars:
+      - key: MYSQL_ROOT_PASSWORD
+        value: rootpassword
+      - key: MYSQL_DATABASE
+        value: form_db
+      - key: MYSQL_USER
+        value: user
+      - key: MYSQL_PASSWORD
+        value: password
