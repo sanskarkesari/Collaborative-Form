@@ -1,4 +1,4 @@
-Real-Time Form-Filling Backend : Collaborative Form is a web application that enables multiple users to fill out forms together in real-time, similar to Google Forms but with live updates. Built as a backend-focused project, it showcases my skills in Python, FastAPI, WebSockets, and PostgreSQL, demonstrating my ability to design scalable, real-time systems.
+Collaborative Form is a backend project that enables multiple users to fill out forms together in real-time, similar to Google Forms but with live updates. Built as a backend-focused project, it showcases my skills in Python, FastAPI, WebSockets, and PostgreSQL, demonstrating my ability to design scalable, real-time systems.
 
 GitHub Repository: https://github.com/sanskarkesari/Collaborative-Form
 
